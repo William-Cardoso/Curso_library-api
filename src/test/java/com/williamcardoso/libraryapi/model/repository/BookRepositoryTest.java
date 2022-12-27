@@ -13,6 +13,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import java.util.Optional;
+
 @ExtendWith(SpringExtension.class)
 @ActiveProfiles("test")
 @DataJpaTest //utilizado anotação para  testes com jpa,com uma instancia do banco.
@@ -30,7 +32,7 @@ public class BookRepositoryTest {
         //cenario
 
         String isbn = "123";
-        Book book = Book.builder().title("Aventuras").author("Fulano").isbn(isbn).build();
+        Book book = createNewBook(isbn);
         entityManager.persist(book);//persistindo book na base de dados
 
         //execução
@@ -43,8 +45,13 @@ public class BookRepositoryTest {
 
 
     }
+
+    private Book createNewBook(String isbn) {
+        return Book.builder().title("Aventuras").author("Fulano").isbn(isbn).build();
+    }
+
     @Test
-    @DisplayName("Deve retornar falso quando não  existir um livro na base com isbn informado")
+    @DisplayName("Deve retornar false quando não  existir um livro na base com isbn informado")
     public void returnFalseWhenIsbnDoesntExists(){
         //cenario
 
@@ -60,5 +67,45 @@ public class BookRepositoryTest {
 
 
     }
+    @Test
+    @DisplayName("Deve obter um livro por id.")
+    public void findByIdTest(){
+
+        //cenario
+        Book book = createNewBook("123");//livro criado sem ID pois aida não foi salvo bo BD
+        entityManager.persist(book);
+
+        //execução
+        Optional<Book> foundBook = repository.findById(book.getId());//testando o findById um metodo do repositorio
+
+        //verificação
+        Assertions.assertThat( foundBook.isPresent()).isTrue();
+
+    }
+    @Test
+    @DisplayName("Deve salvar um livro")
+    public void saveBookTest(){
+
+        Book book = createNewBook("123");
+
+        Book savedBook = repository.save(book);
+
+        Assertions.assertThat( savedBook.getId()).isNotNull();
+    }
+    @Test
+    @DisplayName("Deve deletar um livro")
+    public void deleteBookTest(){
+
+        Book book = createNewBook("123");
+        entityManager.persist(book);
+
+        Book foundBook = entityManager.find(Book.class, book.getId());//garantindo que o livro estava na base
+
+        repository.delete(foundBook);
+
+        Book deletedBook = entityManager.find(Book.class, book.getId());//verificando se realmente foi deletado.
+        Assertions.assertThat(deletedBook).isNull();
+    }
+
 
 }
